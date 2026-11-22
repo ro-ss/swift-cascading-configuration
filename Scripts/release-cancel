@@ -1,0 +1,27 @@
+#!/bin/zsh -f
+#
+# Scripts/release-cancel
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Cancels a GitHub draft release.
+#
+# Usage: release-cancel <version>
+#
+
+. "${0:A:h}/_setup-script"
+
+readonly version="${1}"
+readonly tag="v${version}"
+
+export SCC_VERSION="${version}"
+print_notice '❌ Canceling release for' "${@}"
+unset SCC_VERSION
+
+if [[ "$(gh release view "${tag}" --json isDraft -q .isDraft)" != true ]]; then
+	printf $'\nError: %s is not a draft release\n' "${tag}" >&2
+	exit 1
+fi
+
+gh release delete "${tag}" -y

@@ -1,0 +1,15 @@
+#!/bin/zsh -f
+#
+# Scripts/build
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Builds the Swift package.
+#
+
+. "${0:A:h}/_setup-script"
+
+print_notice '🏗​ Building' "${@}"
+
+swift build "${@:2}"

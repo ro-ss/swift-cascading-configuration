@@ -1,0 +1,18 @@
+#!/bin/zsh -f
+#
+# Scripts/setup-workflow-repo
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Sets up the repo for use in a GitHub workflow.
+#
+
+. "${0:A:h}/_setup-script"
+
+# shellcheck disable=SC2066
+for branch in\
+	"${(f)"$(git for-each-ref refs/remotes/origin --format='%(if)%(symref)%(then)%(else)%(refname:strip=3)%(end)')":#}"
+do
+	git branch --track "${branch}" "origin/${branch}" >/dev/null 2>&1 || true
+done

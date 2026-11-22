@@ -1,0 +1,57 @@
+# editorconfig-checker-disable
+# yamllint disable-line rule:line-length
+# yaml-language-server: $schema=https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2/main/schema/markdownlint-cli2-config-schema.json
+# editorconfig-checker-enable
+#
+# .markdownlint-cli2.yaml
+# swift-cascading-configuration
+#
+# markdownlint-cli2 0.24.1 / markdownlint 0.42.1
+#
+---
+noBanner: true
+noProgress: true
+config:
+  blanks-around-fences:
+    list_items: false
+  code-block-style:
+    style: fenced
+  code-fence-style:
+    style: backtick
+  emphasis-style:
+    style: underscore
+  fenced-code-language:
+    allowed_languages: [console, shell, swift]
+    language_only: true
+  heading-style:
+    style: atx
+  hr-style:
+    style: ---
+  line-length:
+    stern: true
+  link-image-style:
+    autolink: false
+    collapsed: false
+    full: false
+    shortcut: false
+    url_inline: false
+  no-duplicate-heading:
+    siblings_only: true
+  no-hard-tabs:
+    code_blocks: false
+    spaces_per_tab: 2
+  no-trailing-spaces:
+    code_blocks: true
+    strict: true
+  ol-prefix:
+    style: ordered
+  reference-links-images:
+    shortcut_syntax: true
+  strong-style:
+    style: asterisk
+  table-column-style:
+    style: aligned
+  table-pipe-style:
+    style: leading_and_trailing
+  ul-style:
+    style: dash

@@ -1,0 +1,21 @@
+#!/bin/zsh -f
+#
+# Scripts/update-dependencies
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Update dependencies.
+#
+
+. "${0:A:h}/_setup-script"
+
+print_notice '⬆️​ Updating dependencies for' "${@}"
+
+printf -- $'--> 🍺 Homebrew\n'
+export SCC_DO_NOT_PRINT_NOTICE=
+Scripts/bootstrap
+unset SCC_DO_NOT_PRINT_NOTICE
+
+printf -- $'--> 🕊​ Swift\n'
+swift package update

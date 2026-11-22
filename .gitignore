@@ -1,0 +1,10 @@
+/.build/
+/.claude/settings.local.json
+/.claude/worktrees/
+/.idea/
+/.index-build/
+/.swiftpm/
+/.vale/config/grammars/
+/.vscode/
+.DS_Store
+*~

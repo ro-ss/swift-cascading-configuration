@@ -1,0 +1,120 @@
+#
+# .github/workflows/ci.yaml
+#
+---
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+permissions: {}
+jobs:
+  build-test:
+    name: Build & Test
+    strategy:
+      matrix:
+        runner: [macos-15, macos-15-intel, macos-26, macos-26-intel, xcode-27]
+      fail-fast: false
+    runs-on: ${{matrix.runner}}
+    defaults: &defaults
+      run:
+        # Force all run commands to not use Rosetta 2 on arm64
+        shell: >-
+          ${{
+            endsWith(matrix.runner, '-intel')
+            && '/bin/zsh -efux --extended-glob --pipe-fail --warn-create-global {0}'
+            || 'arch -arm64 /bin/zsh -efux --extended-glob --pipe-fail --warn-create-global {0}'
+          }}
+    steps:
+    - &checkout
+      name: 🛒 Checkout repo
+      env:
+        GIT_CONFIG_COUNT: 1
+        GIT_CONFIG_KEY_0: init.defaultBranch
+        GIT_CONFIG_VALUE_0: ${{github.event.repository.default_branch}}
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        # Include all history & tags for Scripts/version
+        fetch-depth: 0
+        persist-credentials: false
+
+    - &setup-repo
+      name: 🔧 Setup repo
+      run: Scripts/setup-workflow-repo
+
+    - &select-xcode
+      name: 🛠 Select latest stable Xcode
+      run: |
+        setopt glob_assign
+        readonly xcode_path=/Applications/Xcode_[0-9.]##.app(/On[1])
+        sudo xcode-select -s "${xcode_path}"
+        printf $'DEVELOPER_DIR=%s/Contents/Developer\n' "${xcode_path}" >>"${GITHUB_ENV}"
+
+    - &bootstrap
+      name: 👢 Bootstrap
+      run: |
+        brew untap -fq aws/tap 2>/dev/null || true
+        Scripts/bootstrap
+
+    - name: 🕊 Use Swiftly Swift
+      if: ${{matrix.runner != 'xcode-27'}}
+      run: |
+        swiftly init -ny --skip-install
+        swiftly install -y
+        swiftly link latest
+        printf %s ~/.swiftly/bin >>"${GITHUB_PATH}"
+
+    - name: 🏗 Build
+      run: Scripts/build ci -c release
+
+    - name: 🧪 Test
+      run: Scripts/test
+
+  build-test-linux:
+    name: Build & Test (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    defaults:
+      run:
+        shell: /bin/zsh -efux --extended-glob --pipe-fail --warn-create-global {0}
+    steps:
+    - name: 💤 Install zsh
+      shell: bash
+      run: apt-get update -q && apt-get install -qy zsh
+
+    - *checkout
+
+    - name: 🔧 Setup repo
+      run: |
+        # The container user does not own the checkout
+        git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+        Scripts/setup-workflow-repo
+
+    - name: 🏗 Build
+      run: Scripts/build ci -c release
+
+    - name: 🧪 Test
+      run: Scripts/test
+
+  lint:
+    name: Lint
+    strategy:
+      matrix:
+        runner: [xcode-27]
+    runs-on: ${{matrix.runner}}
+    defaults: *defaults
+    steps:
+    - *checkout
+
+    - *setup-repo
+
+    - *select-xcode
+
+    - *bootstrap
+
+    - name: 🚨 Lint
+      run: Scripts/lint

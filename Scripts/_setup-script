@@ -1,0 +1,73 @@
+#!/bin/zsh -f
+#
+# Scripts/_setup-script
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Performs boilerplate setup for scripts.
+#
+
+builtin unalias -as
+setopt err_exit extended_glob pipe_fail no_unset warn_create_global
+export IFS=$' \t\n\0'
+export NULLCMD=cat
+export PAGER=cat
+export READNULLCMD=cat
+export TMPDIR="${"${TMPDIR:-/tmp/}"/%(#b)([^\/])/"${match[1]}"/}"
+export TMPPREFIX="${TMPPREFIX:-"${TMPDIR}"zsh}"
+unset CDPATH
+unset ENV
+unset TMPSUFFIX
+
+readonly scc_folder="${0:A:h:h}"
+if ! cd "${scc_folder}"; then
+	printf $'Error: Failed to cd into folder: %s\n' "${scc_folder}" >&2
+	exit 1
+fi
+
+print_notice() {
+	[[ -v SCC_DO_NOT_PRINT_NOTICE ]] && return
+	if [[ -t 1 ]]; then
+		local -r prefix=$'\e[1;34m==>\e[0m'
+	else
+		local -r prefix='==>'
+	fi
+	printf $'%s %s swift-cascading-configuration %s%s\n'\
+		"${prefix}"\
+		"${1}"\
+		"${SCC_VERSION:-$(Scripts/version)}"\
+		"${${*:2}:+ (arguments: ${${(q)@:2}[*]})}"
+}
+
+ensure_command_available() {
+	local -i return_status=0
+	local command
+	for command in "${@}"; do
+		if ! whence -- "${command}" >/dev/null; then # shellcheck disable=SC2183
+			printf $'Error: %1$s is not installed. Run \'Scripts/bootstrap\' or \'brew install %1$s\'.\n' "${command}" >&2
+			return_status=1
+		fi
+	done
+	return "${return_status}"
+}
+
+# Prints each existing regular file, except ignored files & vendored files (in a target's Vendored folder), separated by
+# NULs
+project_files() {
+	# shellcheck disable=SC1036,SC2034,SC2206
+	local -ar files=(${^${(0)"$(git ls-files -z --cached --others --exclude-standard --deduplicate)"}}(N.))
+	print -rn -- "${(pj:\0:)${(@)files:#(Sources|Tests)/*/Vendored/*}}"
+}
+
+# Removes SwiftFormat's progress & summary lines from stdin, plus each line fully matching an extended regex in ${@}
+filter_swiftformat_output() {
+	# shellcheck disable=SC2034
+	local -ar patterns=(
+		'Running SwiftFormat\.{3}'
+		'Reading (?:config|swift-version) file at .*'
+		'\x1b\[32mSwiftFormat completed in \d+(?:\.\d+)?s\.\x1b\[0m'
+		"${@}"
+	)
+	grep -vxE "${(j:|:)patterns}" || true
+}

@@ -1,0 +1,104 @@
+#
+# .github/workflows/tag-pushed.yaml
+#
+---
+name: tag-pushed
+on:
+  push:
+    tags: ['**']
+permissions: {}
+defaults:
+  run:
+    # Force all run commands to not use Rosetta 2
+    shell: arch -arm64 /bin/zsh -efux --extended-glob --pipe-fail --warn-create-global {0}
+jobs:
+  tag-pushed:
+    if: ${{!github.event.repository.fork}}
+    runs-on: xcode-27
+    permissions:
+      contents: write
+    steps:
+    - name: 🛒 Checkout repo
+      env:
+        GIT_CONFIG_COUNT: 1
+        GIT_CONFIG_KEY_0: init.defaultBranch
+        GIT_CONFIG_VALUE_0: ${{github.event.repository.default_branch}}
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        # Include all history & tags for the default-branch & tag checks
+        fetch-depth: 0
+
+    - name: 🖋 Verify tag has trusted SSH signature
+      run: |
+        git fetch --force origin "${GITHUB_REF}:${GITHUB_REF}"
+        if [[
+          "$(git tag -l --format='%(contents:signature)' "${GITHUB_REF_NAME}")" != '-----BEGIN SSH SIGNATURE-----'*
+        ]]; then
+          printf $'::error::Tag %s does not have an SSH signature; delete the tag\n' "${GITHUB_REF_NAME}" >&2
+          exit 1
+        fi
+        git config gpg.ssh.allowedSignersFile .github/allowed_signers
+        if ! git verify-tag "${GITHUB_REF_NAME}"; then
+          printf $'::error::Tag %s SSH signature is not trusted; delete the tag\n' "${GITHUB_REF_NAME}" >&2
+          exit 2
+        fi
+
+    - name: 🏷 Exit if not a version tag
+      run: |
+        if [[ ! "${GITHUB_REF_NAME}" =~ '^v[[:digit:]]+(\.[[:digit:]]+)*(-(alpha|beta|rc)\.[[:digit:]]+)?$' ]]; then
+          printf $'::error::%s is not a version tag\n' "${GITHUB_REF_NAME}" >&2
+          exit 3
+        fi
+
+    - name: 🌿 Verify version tag is on default branch
+      env:
+        DEFAULT_BRANCH: ${{github.event.repository.default_branch}}
+      run: |
+        if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${DEFAULT_BRANCH}"; then
+          printf\
+            $'::error::Tag %s is not on the %s branch; delete the tag\n'\
+            "${GITHUB_REF_NAME}"\
+            "${DEFAULT_BRANCH}"\
+            >&2
+          exit 4
+        fi
+
+    - name: ⚖️ Verify draft release target & title match tag
+      env:
+        GH_TOKEN: ${{github.token}}
+      run: |
+        read -r draft_target draft_title < <(
+          gh release view "${GITHUB_REF_NAME}"\
+            --json isDraft,name,targetCommitish\
+            -q 'select(.isDraft == true) | .targetCommitish + " " + .name'
+        ) || true
+        readonly draft_target draft_title
+        if [[ -z "${draft_title}" ]]; then
+          printf $'::error::Failed to find draft release for tag %s; delete the tag\n' "${GITHUB_REF_NAME}" >&2
+          exit 5
+        fi
+        tag_commit="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"
+        readonly tag_commit
+        if [[ "${draft_target}" != "${tag_commit}" ]]; then
+          printf\
+            $'::error::Draft release target (%s) does not match tag commit (%s); delete the tag\n'\
+            "${draft_target}"\
+            "${tag_commit}"\
+            >&2
+          exit 6
+        fi
+        tag_title="${GITHUB_REF_NAME}: $(git tag -l --format='%(contents:subject)' "${GITHUB_REF_NAME}")"
+        readonly tag_title
+        if [[ "${draft_title}" != "${tag_title}" ]]; then
+          printf\
+            $'::error::Draft release title (%s) does not match tag title (%s); delete the tag\n'\
+            "${draft_title}"\
+            "${tag_title}"\
+            >&2
+          exit 7
+        fi
+
+    - name: 📢 Publish release
+      env:
+        GH_TOKEN: ${{github.token}}
+      run: gh release edit "${GITHUB_REF_NAME}" --draft=false

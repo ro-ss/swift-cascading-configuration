@@ -1,0 +1,74 @@
+#!/bin/zsh -f
+#
+# Scripts/format
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Automatically formats & fixes style violations using various tools. Exits 1 after the 1st tool that modifies any file,
+# so that each run's modifications can be reviewed 1 tool at a time.
+#
+# Please keep in sync with Scripts/lint.
+#
+
+. "${0:A:h}/_setup-script"
+
+print_notice '🧹 Formatting' "${@}"
+
+zmodload zsh/zutil
+zparseopts -D -F -A received_flag L
+readonly -A received_flag
+
+ensure_command_available markdownlint-cli2 swiftformat swiftlint
+
+# shellcheck disable=SC2034
+readonly -a files=("${(@0)"$(project_files)"}")
+
+# Prints the hash of each file's contents
+hash_files() {
+	git hash-object --no-filters --stdin-paths <<<"${(F)files}"
+}
+
+original_hashes="$(hash_files)"
+readonly original_hashes
+
+# Exits 1 iff any file's contents have changed since this script started (for tools that exit 0 after modifying files)
+exit_if_modified() {
+	if [[ "$(hash_files)" != "${original_hashes}" ]]; then
+		printf $'Modified files; review the modifications, then rerun Scripts/format\n'
+		exit 1
+	fi
+}
+
+printf -- $'--> 🕊​ SwiftFormat\n'
+readonly -a swift_files=("${(@M)files:#*.swift}")
+if ((${#swift_files})); then
+	swiftformat --strict --color always "${swift_files[@]}" |& filter_swiftformat_output '0/\d+ files formatted\.'
+fi
+# Indent Swift code in Markdown by 4 spaces, because .editorconfig indents Markdown with spaces
+readonly -a markdown_files=("${(@M)files:#*.md}")
+if ((${#markdown_files})); then
+	swiftformat --strict --color always --indent 4 "${markdown_files[@]}" |&
+		filter_swiftformat_output '0/\d+ files formatted\.'
+fi
+
+printf -- $'--> 🦅 SwiftLint\n'
+swiftlint --fix --quiet --reporter relative-path -- "${swift_files[@]}"
+exit_if_modified
+
+if ! [[ -v 'received_flag[-L]' ]]; then
+	printf -- $'--> 📏 Layout\n'
+	Scripts/layout -f
+fi
+
+printf -- $'--> 〽️ Markdown\n'
+markdownlint-cli2 --fix -- "${(@)markdown_files/#/:}"
+exit_if_modified
+
+printf -- $'--> 🚷 Non-Executables\n'
+# shellcheck disable=SC1036,SC2206
+readonly -a non_executables=(${^${(M)files:#Scripts/*}}(N^f+111))
+if (("${#non_executables[@]}")); then
+	chmod -vv a+x "${non_executables[@]}"
+	exit 1
+fi

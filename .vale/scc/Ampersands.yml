@@ -1,0 +1,13 @@
+#
+# .vale/scc/Ampersands.yml
+# swift-cascading-configuration
+#
+# Vale 3.27.0
+#
+---
+extends: existence
+message: Prefer '&' to 'and' (except in 'and/or' & after a comma that separates distinct clauses)
+level: error
+nonword: true
+tokens:
+- (?<!,)\s\band\b(?!/)

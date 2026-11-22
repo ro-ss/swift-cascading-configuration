@@ -1,0 +1,117 @@
+#
+# .swiftformat
+# swift-cascading-configuration
+#
+# SwiftFormat 0.64.7
+#
+
+# Vendored files
+--exclude Sources/*/Vendored,Tests/*/Vendored
+
+# Disabled rules (enabled by default)
+--disable hoistAwait
+--disable hoistTry
+
+# Disabled rules (disabled by default)
+#--enable blankLinesAfterGuardStatements
+#--enable ifExpressions
+#--enable markTypes
+#--enable noExplicitOwnership
+#--enable preferExplicitFalse
+#--enable testSuiteAccessControl
+#--enable wrapMultilineConditionalAssignment
+#--enable wrapSwitchCases
+
+# Enabled rules (disabled by default)
+--enable acronyms
+--enable blankLineAfterSwitchCase
+--enable blockComments
+--enable commonTypos
+--enable emptyExtensions
+--enable forWhere
+--enable isEmpty
+--enable noGuardInTests
+--enable organizeDeclarations
+--enable preferContains
+--enable preferCountWhere
+--enable preferFinalClasses
+--enable preferFirstWhere
+--enable preferFlatMap
+--enable preferLazyMap
+--enable preferMinOverSorted
+--enable preferStructSwiftTestingSuites
+--enable preferSwiftStringAPI
+--enable preferSwiftTesting
+--enable privateSwiftUIDynamicProperties
+--enable propertyTypes
+--enable redundantExtendedLifetime
+--enable redundantOverload
+--enable redundantSendable
+--enable singlePropertyPerLine
+--enable sortSwitchCases
+--enable unusedPrivateDeclarations
+--enable urlMacro
+--enable validateTestCases
+--enable wrapCaseBodies
+--enable wrapClosureBodies
+--enable wrapDoBodies
+--enable wrapEnumCases
+--enable wrapGuardStatementBodies
+--enable wrapMultilineFunctionChains
+--enable wrapSingleLineStrings
+
+# Rule options
+--acronym-visibility           public
+--acronyms                     ADI,AE,ANSI,API,CD,CEO,CF,CI,CK,CPU,DAV,DOS,DS,DSID,DVD,EOF,FAQ,FAT,FD,FTP,GB,GID,GUI,GUID,HTML,HTTP,HTTPS,ID,IFS,ISO,JSON,KB,MD,MDM,MDS,MIB,MIT,NS,OS,OSX,PDF,PR,QL,SB,SDK,SHA,SS,SSH,STDQ,STDRDL,UDF,UI,UID,URL,US,UTF,UUID,VPP,XML,XPC,YAML
+--allow-partial-wrapping       false
+--blank-line-after-switch-case never
+--complex-attributes           prev-line
+--computed-var-attributes      prev-line
+--conditional-assignment       always
+--doc-comments                 before-non-local-declarations
+--exponent-grouping            enabled
+--file-macro                   "#fileID"
+--fraction-grouping            enabled
+--func-attributes              prev-line
+--header                       //\n// {file}\n// swift-cascading-configuration\n//\n// Copyright © {created.year} Ross Goldberg\. All rights reserved\.\n//
+--hex-literal-case             lowercase
+--ifdef                        no-indent
+--import-grouping              alpha
+--indent                       tab
+--indent-strings               true
+--language-mode                6
+--mark-categories              false
+--markdown-files               format-strict
+--max-width                    120
+--organization-mode            type
+--organize-types               actor,class,enum,extension,protocol,struct,typealias
+--prefer-content-builder       true
+--prefer-us-spelling           true
+--property-types               inferred
+--ranges                       no-space
+--redundant-async              always
+--redundant-optional-binding   always
+--redundant-throws             always
+--semicolons                   never
+--short-optionals              always
+--single-line-for-each         convert
+--stored-var-attributes        prev-line
+--suite-name-format            standard-identifiers
+--tab-width                    2
+--timezone                     utc
+--type-attributes              prev-line
+--type-body-marks              remove
+--type-order                   beforeMarks,nestedType,staticProperty,staticPropertyWithBody,classPropertyWithBody,staticMethod,classMethod,overriddenProperty,swiftUIPropertyWrapper,instanceProperty,instancePropertyWithBody,computedProperty,instanceLifecycle,swiftUIProperty,swiftUIMethod,overriddenMethod,instanceMethod
+--typo-visibility              public
+--wrap-arguments               before-first
+--wrap-closure-bodies
+--wrap-collections             before-first
+--wrap-conditions              before-first
+--wrap-effects                 never
+--wrap-parameters              before-first
+--wrap-return-type             never
+--wrap-single-line-enum-cases  true
+--wrap-string-interpolation    true
+--wrap-ternary                 before-operators
+--wrap-type-aliases            before-first
+--xcode-indentation            enabled

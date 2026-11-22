@@ -1,0 +1,13 @@
+#
+# .vale/scc/EmDashes.yml
+# swift-cascading-configuration
+#
+# Vale 3.27.0
+#
+---
+extends: existence
+message: Do not use em dashes
+level: error
+nonword: true
+tokens:
+- —

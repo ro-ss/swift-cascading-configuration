@@ -1,0 +1,9 @@
+#
+# Tests/.swiftlint.yml
+# swift-cascading-configuration
+#
+# SwiftLint 0.65.1
+#
+---
+disabled_rules:
+- superfluous_disable_command

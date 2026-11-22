@@ -1,0 +1,15 @@
+#!/bin/zsh -f
+#
+# Scripts/test
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Runs tests.
+#
+
+. "${0:A:h}/_setup-script"
+
+print_notice '🧪 Testing' "${@}"
+
+swift test --disable-xctest -q "${@}"

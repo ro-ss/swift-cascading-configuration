@@ -1,0 +1,13 @@
+#
+# .vale/scc/CommaAmpersands.yml
+# swift-cascading-configuration
+#
+# Vale 3.27.0
+#
+---
+extends: existence
+message: Omit the Oxford comma before '&'
+level: error
+nonword: true
+tokens:
+- ',\s+&'

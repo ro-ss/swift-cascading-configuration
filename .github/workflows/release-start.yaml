@@ -1,0 +1,140 @@
+#
+# .github/workflows/release-start.yaml
+#
+---
+name: release-start
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git reference
+        required: true
+        default: main
+        type: string
+      version:
+        description: Version
+        required: true
+        type: string
+      title:
+        description: Title
+        required: true
+        type: string
+concurrency:
+  group: ${{github.workflow}}-${{inputs.version}}
+permissions: {}
+defaults:
+  run:
+    # Force all run commands to not use Rosetta 2
+    shell: arch -arm64 /bin/zsh -efux --extended-glob --pipe-fail --warn-create-global {0}
+jobs:
+  validate-inputs:
+    if: ${{!github.event.repository.fork}}
+    runs-on: xcode-27
+    outputs:
+      commit_sha: ${{steps.resolve-sha.outputs.commit_sha}}
+    steps:
+    - name: 🔢 Reject invalid version
+      env:
+        VERSION: ${{inputs.version}}
+      run: |
+        if [[ ! "${VERSION}" =~ '^[[:digit:]]+(\.[[:digit:]]+)*(-(alpha|beta|rc)\.[[:digit:]]+)?$' ]]; then
+          printf $'::error::%s is not a valid version\n' "${VERSION}" >&2
+          exit 1
+        fi
+
+    - name: 🔤 Reject invalid title
+      env:
+        TITLE: ${{inputs.title}}
+      run: |
+        if (("${#TITLE}" > 64)); then
+          printf $'::error::Title \'%s\' contains more than 64 characters\n' "${(q)TITLE}" >&2
+          exit 2
+        fi
+        if [[ "${TITLE}" =~ [[:cntrl:]] ]]; then
+          printf $'::error::Title \'%s\' contains control characters\n' "${(q)TITLE}" >&2
+          exit 3
+        fi
+        if [[ "${TITLE}" = (' '*|*' ') ]]; then
+          printf $'::error::Title \'%s\' begins or ends with a space\n' "${(q)TITLE}" >&2
+          exit 4
+        fi
+
+    - name: 🛒 Checkout repo
+      env:
+        GIT_CONFIG_COUNT: 1
+        GIT_CONFIG_KEY_0: init.defaultBranch
+        GIT_CONFIG_VALUE_0: ${{github.event.repository.default_branch}}
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{inputs.ref}}
+        # Include all history & tags for the default-branch & tag checks
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: 🌿 Reject reference not on default branch
+      env:
+        DEFAULT_BRANCH: ${{github.event.repository.default_branch}}
+        REF: ${{inputs.ref}}
+      run: |
+        if ! git merge-base --is-ancestor HEAD "origin/${DEFAULT_BRANCH}"; then
+          printf $'::error::%s is not on the %s branch\n' "${REF}" "${DEFAULT_BRANCH}" >&2
+          exit 5
+        fi
+
+    - name: 🔖 Reject existing version tag
+      env:
+        VERSION: ${{inputs.version}}
+      run: |
+        if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+          printf $'::error::Tag v%s already exists\n' "${VERSION}" >&2
+          exit 6
+        fi
+
+    - name: 🔎 Resolve release commit SHA
+      id: resolve-sha
+      run: |
+        commit_sha="$(git rev-parse HEAD)"
+        readonly commit_sha
+        printf $'commit_sha=%s\n' "${commit_sha}" >>"${GITHUB_OUTPUT}"
+
+  release-start:
+    if: ${{!github.event.repository.fork}}
+    needs: validate-inputs
+    runs-on: xcode-27
+    permissions:
+      contents: write
+    steps:
+    - name: 🛒 Checkout repo
+      env:
+        GIT_CONFIG_COUNT: 1
+        GIT_CONFIG_KEY_0: init.defaultBranch
+        GIT_CONFIG_VALUE_0: ${{github.event.repository.default_branch}}
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{needs.validate-inputs.outputs.commit_sha}}
+        persist-credentials: false
+
+    - name: 📝 Reject existing release
+      env:
+        GH_TOKEN: ${{github.token}}
+        VERSION: ${{inputs.version}}
+      run: |
+        if [[ "$(gh release list -L 1000 --json tagName -q 'any(.[]; .tagName == "v" + env.VERSION)')" = true ]]; then
+          printf $'::error::Release v%s already exists\n' "${VERSION}" >&2
+          exit 7
+        fi
+
+    - name: 📝 Create draft release
+      env:
+        COMMIT_SHA: ${{needs.validate-inputs.outputs.commit_sha}}
+        GH_TOKEN: ${{github.token}}
+        TITLE: ${{inputs.title}}
+        VERSION: ${{inputs.version}}
+      run: |
+        gh release create\
+          --target "${COMMIT_SHA}"\
+          -t "v${VERSION}: ${TITLE}"\
+          ${"${VERSION//[^-]}":+-p}\
+          -d\
+          --generate-notes\
+          "v${VERSION}"

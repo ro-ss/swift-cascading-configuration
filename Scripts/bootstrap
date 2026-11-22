@@ -1,0 +1,32 @@
+#!/bin/zsh -f
+#
+# Scripts/bootstrap
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Installs dependencies for Scripts/format & Scripts/lint.
+#
+# Usage: bootstrap [<brew-bundle-install-argument>...]
+#
+
+. "${0:A:h}/_setup-script"
+
+print_notice '👢 Bootstrapping' "${@}"
+
+if ! whence brew >/dev/null; then
+	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+brew update -q
+installed_formulae=("${(f)$(brew list --formulae)}")
+readonly -a installed_formulae
+bootstrap_formulae=("${(f)$(HOMEBREW_NO_ENV_HINTS=1 brew deps --union "${(f)$(brew bundle list --formulae)}")}")
+readonly -a bootstrap_formulae
+# shellcheck disable=SC2086
+if (("${#installed_formulae:*bootstrap_formulae}")); then
+	brew upgrade --overwrite -q -- ${installed_formulae:*bootstrap_formulae} || true
+fi
+brew bundle upgrade -q "${@}"
+brew upgrade --overwrite -q -- "${bootstrap_formulae[@]}"
+vale sync

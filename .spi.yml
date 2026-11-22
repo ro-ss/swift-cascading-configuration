@@ -1,0 +1,11 @@
+#
+# .spi.yml
+# swift-cascading-configuration
+#
+# Swift Package Index
+#
+---
+version: 1
+builder:
+  configs:
+  - documentation_targets: [CascadingConfiguration]

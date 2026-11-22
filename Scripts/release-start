@@ -1,0 +1,66 @@
+#!/bin/zsh -f
+#
+# Scripts/release-start
+# swift-cascading-configuration
+#
+# Copyright © 2025 Ross Goldberg. All rights reserved.
+#
+# Starts the release process by triggering workflow dispatch to create a GitHub draft release.
+#
+# Usage: release-start <version> <title> [<ref>]
+#
+# <version> must match the following zsh pattern:
+#
+# ^[[:digit:]]+(\.[[:digit:]]+)*(-(alpha|beta|rc)\.[[:digit:]]+)?$
+#
+# <title> may contain at most 64 characters, which cannot be control characters
+#
+# <ref> if optional ref supplied, must be on the main branch; defaults to the tip of the GitHub main branch
+#
+
+. "${0:A:h}/_setup-script"
+
+readonly version="${1}"
+readonly title="${2}"
+
+export SCC_VERSION="${version}"
+print_notice '🚀 Starting release for' "${@}"
+unset SCC_VERSION
+printf $'\n'
+
+if [[ ! "${version}" =~ '^[[:digit:]]+(\.[[:digit:]]+)*(-(alpha|beta|rc)\.[[:digit:]]+)?$' ]]; then
+	printf $'Error: %s is not a valid version\n' "${version}" >&2
+	exit 1
+fi
+
+if (("${#title}" > 64)); then
+	printf $'Error: Title \'%s\' contains more than 64 characters\n' "${(q)title}" >&2
+	exit 2
+fi
+
+if [[ "${title}" =~ [[:cntrl:]] ]]; then
+	printf $'Error: Title \'%s\' contains control characters\n' "${(q)title}" >&2
+	exit 3
+fi
+
+# shellcheck disable=SC1027,SC1036,SC1072,SC1073
+if [[ "${title}" = (' '*|*' ') ]]; then
+	printf $'Error: Title \'%s\' begins or ends with a space\n' "${(q)title}" >&2
+	exit 4
+fi
+
+read -r gh_repo_url default_branch default_branch_sha < <(
+	gh repo view --json url,defaultBranchRef -q '.url + " " + .defaultBranchRef.name + " " + .defaultBranchRef.target.oid'
+)
+readonly gh_repo_url default_branch default_branch_sha
+
+readonly ref="${3:-"${default_branch_sha}"}"
+git fetch -q "${gh_repo_url}.git" "${default_branch}"
+commit_sha="$(git rev-parse --verify "${ref}^{commit}")"
+readonly commit_sha
+if ! git merge-base --is-ancestor "${commit_sha}" "${default_branch_sha}"; then
+	printf $'Error: %s is not on the %s branch of %s\n' "${ref}" "${default_branch}" "${gh_repo_url}" >&2
+	exit 5
+fi
+
+gh workflow run release-start.yaml -f version="${version}" -f title="${title}" -f ref="${commit_sha}"

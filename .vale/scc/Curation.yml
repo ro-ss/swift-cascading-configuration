@@ -1,0 +1,13 @@
+#
+# .vale/scc/Curation.yml
+# swift-cascading-configuration
+#
+# Vale 3.27.0
+#
+---
+extends: existence
+message: Avoid '%s'; prefer 'select', 'handle', etc.
+level: error
+ignorecase: true
+tokens:
+- curat(?:e|ed|es|ing|ion|ions|or|ors)
